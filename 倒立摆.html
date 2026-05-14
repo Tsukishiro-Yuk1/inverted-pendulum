@@ -1,0 +1,1235 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>倒立摆强化学习模拟器 - 完整版</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #1a2980, #26d0ce);
+            color: #333;
+            padding: 20px;
+        }
+        
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            max-width: 1400px;
+            width: 100%;
+            backdrop-filter: blur(10px);
+        }
+        
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 2.2em;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .subtitle {
+            color: #7f8c8d;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        @media (max-width: 1200px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .game-section {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .canvas-container {
+            position: relative;
+            background: linear-gradient(to bottom, #ecf0f1, #bdc3c7);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.1);
+        }
+        
+        #gameCanvas {
+            display: block;
+            border: 3px solid #34495e;
+            border-radius: 10px;
+            background: linear-gradient(to bottom, #2c3e50, #34495e);
+            width: 100%;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+        }
+        
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .control-btn {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-width: 140px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .control-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+        }
+        
+        .control-btn:active {
+            transform: translateY(-1px);
+        }
+        
+        .control-btn.start { background: linear-gradient(135deg, #2ecc71, #27ae60); color: white; }
+        .control-btn.pause { background: linear-gradient(135deg, #f39c12, #e67e22); color: white; }
+        .control-btn.reset { background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; }
+        .control-btn.train { background: linear-gradient(135deg, #9b59b6, #8e44ad); color: white; }
+        .control-btn.manual { background: linear-gradient(135deg, #3498db, #2980b9); color: white; }
+        
+        .stats-section {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            transition: transform 0.3s ease;
+            border-left: 5px solid;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stat-card.episodes { border-color: #3498db; }
+        .stat-card.score { border-color: #2ecc71; }
+        .stat-card.best-score { border-color: #f1c40f; }
+        .stat-card.steps { border-color: #9b59b6; }
+        
+        .stat-label {
+            font-size: 14px;
+            color: #7f8c8d;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+        
+        .stat-value {
+            font-size: 2.5em;
+            font-weight: 700;
+            color: #2c3e50;
+        }
+        
+        .control-section {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .param-panel {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        }
+        
+        .param-panel h3 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 1.4em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .param-group {
+            margin-bottom: 25px;
+        }
+        
+        .param-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .param-name {
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 1.1em;
+        }
+        
+        .param-value-display {
+            font-weight: 700;
+            color: #2980b9;
+            font-size: 1.2em;
+            background: #ecf0f1;
+            padding: 5px 15px;
+            border-radius: 20px;
+            min-width: 60px;
+            text-align: center;
+        }
+        
+        .slider-container {
+            position: relative;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            height: 8px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: linear-gradient(to right, #e0e0e0, #2980b9);
+            outline: none;
+            border-radius: 4px;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            background: white;
+            border: 3px solid #2980b9;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+            transition: all 0.2s ease;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        
+        .slider-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 8px;
+            font-size: 12px;
+            color: #7f8c8d;
+        }
+        
+        .param-description {
+            font-size: 13px;
+            color: #7f8c8d;
+            margin-top: 8px;
+            padding-left: 5px;
+        }
+        
+        .info-panel {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        }
+        
+        .info-panel h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 1.4em;
+        }
+        
+        .physics-state {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .state-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+        }
+        
+        .state-label {
+            font-size: 12px;
+            color: #7f8c8d;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+        
+        .state-value {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #2c3e50;
+            font-family: 'Consolas', monospace;
+        }
+        
+        .training-log {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            max-height: 150px;
+            overflow-y: auto;
+            font-family: 'Consolas', monospace;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+        
+        .log-entry {
+            margin-bottom: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+        
+        .log-success { color: #27ae60; }
+        .log-info { color: #3498db; }
+        .log-warning { color: #f39c12; }
+        .log-error { color: #e74c3c; }
+        
+        .game-status {
+            background: #fff3cd;
+            color: #856404;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            display: none;
+            font-weight: 600;
+            border-left: 5px solid #ffc107;
+        }
+        
+        .game-status.show {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .instructions {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            margin-top: 20px;
+        }
+        
+        .instructions h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 1.4em;
+        }
+        
+        .instructions-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .instruction-col h4 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+        
+        .instruction-col ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        
+        .instruction-col li {
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+        
+        .instruction-col li:before {
+            content: "•";
+            color: #3498db;
+            position: absolute;
+            left: 0;
+        }
+        
+        .key-hint {
+            display: inline-block;
+            background: #ecf0f1;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: 'Consolas', monospace;
+            font-size: 0.9em;
+            margin: 0 3px;
+        }
+        
+        .footer {
+            margin-top: 30px;
+            color: #7f8c8d;
+            font-size: 0.9em;
+            text-align: center;
+            padding-top: 20px;
+            border-top: 1px solid #ecf0f1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 倒立摆强化学习模拟器</h1>
+        <div class="subtitle">基于Q-learning的物理控制模拟 | 实时训练与可视化</div>
+        
+        <div class="main-content">
+            <div class="game-section">
+                <div class="canvas-container">
+                    <canvas id="gameCanvas" width="600" height="400"></canvas>
+                </div>
+                
+                <div class="controls">
+                    <button class="control-btn start" id="startBtn">
+                        <span>▶</span> 开始训练
+                    </button>
+                    <button class="control-btn pause" id="pauseBtn">
+                        <span>⏸</span> 暂停
+                    </button>
+                    <button class="control-btn reset" id="resetBtn">
+                        <span>🔄</span> 重置
+                    </button>
+                    <button class="control-btn train" id="trainBtn">
+                        <span>🤖</span> AI模式
+                    </button>
+                    <button class="control-btn manual" id="manualBtn">
+                        <span>👆</span> 手动模式
+                    </button>
+                </div>
+                
+                <div class="game-status" id="gameStatus">
+                    ⚠️ 游戏结束！摆杆倒下或小车超出轨道
+                </div>
+                
+                <div class="stats-section">
+                    <div class="stat-card episodes">
+                        <div class="stat-label">训练轮数</div>
+                        <div class="stat-value" id="episodeCount">0</div>
+                    </div>
+                    <div class="stat-card score">
+                        <div class="stat-label">当前得分</div>
+                        <div class="stat-value" id="currentScore">0</div>
+                    </div>
+                    <div class="stat-card best-score">
+                        <div class="stat-label">最高得分</div>
+                        <div class="stat-value" id="bestScore">0</div>
+                    </div>
+                    <div class="stat-card steps">
+                        <div class="stat-label">存活步数</div>
+                        <div class="stat-value" id="stepCount">0</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="control-section">
+                <div class="param-panel">
+                    <h3>⚙️ 学习参数配置</h3>
+                    
+                    <div class="param-group">
+                        <div class="param-header">
+                            <span class="param-name">学习率 (α)</span>
+                            <span class="param-value-display" id="alphaValue">0.1</span>
+                        </div>
+                        <div class="slider-container">
+                            <input type="range" id="alphaSlider" min="0.01" max="0.5" step="0.01" value="0.1">
+                        </div>
+                        <div class="param-description">控制从新经验中学习的速率</div>
+                    </div>
+                    
+                    <div class="param-group">
+                        <div class="param-header">
+                            <span class="param-name">折扣因子 (γ)</span>
+                            <span class="param-value-display" id="gammaValue">0.95</span>
+                        </div>
+                        <div class="slider-container">
+                            <input type="range" id="gammaSlider" min="0.8" max="0.999" step="0.001" value="0.95">
+                        </div>
+                        <div class="param-description">未来奖励的重要性权重</div>
+                    </div>
+                    
+                    <div class="param-group">
+                        <div class="param-header">
+                            <span class="param-name">探索率 (ε)</span>
+                            <span class="param-value-display" id="epsilonValue">0.2</span>
+                        </div>
+                        <div class="slider-container">
+                            <input type="range" id="epsilonSlider" min="0.01" max="0.5" step="0.01" value="0.2">
+                        </div>
+                        <div class="param-description">尝试随机动作的概率</div>
+                    </div>
+                    
+                    <div class="param-group">
+                        <div class="param-header">
+                            <span class="param-name">探索衰减</span>
+                            <span class="param-value-display" id="decayValue">0.995</span>
+                        </div>
+                        <div class="slider-container">
+                            <input type="range" id="decaySlider" min="0.99" max="0.999" step="0.001" value="0.995">
+                        </div>
+                        <div class="param-description">每轮探索率的衰减系数</div>
+                    </div>
+                </div>
+                
+                <div class="info-panel">
+                    <h3>📊 物理状态监控</h3>
+                    
+                    <div class="physics-state">
+                        <div class="state-item">
+                            <div class="state-label">小车位置</div>
+                            <div class="state-value" id="cartPosition">0.00 m</div>
+                        </div>
+                        <div class="state-item">
+                            <div class="state-label">小车速度</div>
+                            <div class="state-value" id="cartVelocity">0.00 m/s</div>
+                        </div>
+                        <div class="state-item">
+                            <div class="state-label">摆杆角度</div>
+                            <div class="state-value" id="poleAngle">0.00°</div>
+                        </div>
+                        <div class="state-item">
+                            <div class="state-label">角速度</div>
+                            <div class="state-value" id="angularVelocity">0.00 rad/s</div>
+                        </div>
+                    </div>
+                    
+                    <h3>📈 训练日志</h3>
+                    <div class="training-log" id="trainingLog">
+                        <div class="log-entry log-info">系统初始化完成</div>
+                        <div class="log-entry log-info">等待训练开始...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="instructions">
+            <h3>🎮 操作说明</h3>
+            <div class="instructions-content">
+                <div class="instruction-col">
+                    <h4>游戏控制</h4>
+                    <ul>
+                        <li><strong>开始训练</strong>: 启动AI学习过程</li>
+                        <li><strong>暂停/继续</strong>: 暂停或继续当前训练</li>
+                        <li><strong>重置</strong>: 重置游戏状态但不重置AI学习</li>
+                        <li><strong>AI模式</strong>: AI自动控制倒立摆</li>
+                        <li><strong>手动模式</strong>: 使用键盘手动控制</li>
+                    </ul>
+                </div>
+                <div class="instruction-col">
+                    <h4>键盘控制（手动模式）</h4>
+                    <ul>
+                        <li><span class="key-hint">←</span> 向左推动小车</li>
+                        <li><span class="key-hint">→</span> 向右推动小车</li>
+                        <li><span class="key-hint">空格</span> 停止推动</li>
+                    </ul>
+                </div>
+                <div class="instruction-col">
+                    <h4>游戏规则</h4>
+                    <ul>
+                        <li><strong>目标</strong>: 保持倒立摆竖直不倒</li>
+                        <li><strong>失败条件</strong>: 摆角超过27° 或 小车超出轨道</li>
+                        <li><strong>得分</strong>: 存活时间越长，角度越小，得分越高</li>
+                        <li><strong>AI学习</strong>: 观察Q-learning算法的学习过程</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>倒立摆强化学习模拟器 v2.0 | 基于Q-learning算法 | 使用精确物理模拟</p>
+        </div>
+    </div>
+
+    <script>
+        // ==================== 全局变量和常量 ====================
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // 游戏状态
+        let isRunning = false;
+        let isPaused = false;
+        let isTrainingMode = true;  // true=AI训练, false=手动控制
+        let gameLoop = null;
+        
+        // 统计数据
+        let episodeCount = 0;
+        let currentScore = 0;
+        let bestScore = 0;
+        let stepCount = 0;
+        let totalSteps = 0;
+        let totalReward = 0;
+        let bestEpisode = 0;
+        
+        // 物理常量
+        const M = 1.0;       // 小车质量 (kg)
+        const m = 0.1;       // 摆锤质量 (kg)
+        const l = 0.5;       // 摆杆长度 (m)
+        const g = 9.81;      // 重力加速度 (m/s²)
+        const dt = 0.016;    // 时间步长 (约60FPS)
+        const forceMagnitude = 12.0;  // 最大施加力 (N)
+        
+        // 系统状态
+        let cartX = 0.0;      // 小车位置 (m)
+        let cartV = 0.0;      // 小车速度 (m/s)
+        let theta = 0.0;      // 摆杆角度 (rad)
+        let thetaDot = 0.0;    // 角速度 (rad/s)
+        let appliedForce = 0.0; // 当前施加的力 (N)
+        
+        // 轨道参数
+        const trackHalfLength = 3.0;  // 轨道半长
+        const maxAngle = Math.PI * 0.15;  // 最大允许角度 27°
+        
+        // ==================== 强化学习参数 ====================
+        let learningAlpha = 0.1;      // 学习率
+        let learningGamma = 0.95;     // 折扣因子
+        let learningEpsilon = 0.2;    // 探索率
+        let epsilonDecay = 0.995;     // 探索率衰减
+        let minEpsilon = 0.01;        // 最小探索率
+        
+        // 状态离散化参数
+        const xBins = 7;        // 位置 (-2.5m 到 2.5m)
+        const thetaBins = 9;    // 角度 (-0.5rad 到 0.5rad)
+        const vBins = 5;        // 速度 (-3m/s 到 3m/s)
+        const omegaBins = 5;    // 角速度 (-5rad/s 到 5rad/s)
+        
+        // Q表
+        let Q = {};
+        
+        // 经验轨迹
+        let trajectory = [];
+        let trainingHistory = [];
+        
+        // ==================== 初始化函数 ====================
+        function initGame() {
+            // 初始化Q表
+            initQTable();
+            
+            // 重置游戏状态
+            resetGameState();
+            
+            // 初始绘制
+            draw();
+            
+            // 更新UI
+            updateUI();
+            
+            addLog("系统初始化完成", "info");
+        }
+        
+        function initQTable() {
+            Q = {};
+            const totalStates = xBins * thetaBins * vBins * omegaBins;
+            console.log(`Q表大小: ${totalStates} 个状态`);
+            addLog(`初始化Q表: ${totalStates}个状态`, "info");
+        }
+        
+        function resetGameState() {
+            cartX = 0.0;
+            cartV = 0.0;
+            theta = (Math.random() * 0.3 - 0.15);  // 随机初始角度 ±8.6°
+            thetaDot = 0.0;
+            appliedForce = 0.0;
+            currentScore = 0;
+            stepCount = 0;
+            trajectory = [];
+            
+            updatePhysicsDisplay();
+        }
+        
+        // ==================== 状态离散化 ====================
+        function discretizeState() {
+            // 位置归一化
+            const xNorm = Math.max(-trackHalfLength, Math.min(trackHalfLength, cartX));
+            const xIdx = Math.floor((xNorm + trackHalfLength) / (2 * trackHalfLength) * (xBins - 1));
+            
+            // 角度归一化
+            const thetaNorm = Math.max(-0.5, Math.min(0.5, theta));
+            const thetaIdx = Math.floor((thetaNorm + 0.5) * (thetaBins - 1));
+            
+            // 速度归一化
+            const vNorm = Math.max(-3.0, Math.min(3.0, cartV));
+            const vIdx = Math.floor((vNorm + 3.0) / 6.0 * (vBins - 1));
+            
+            // 角速度归一化
+            const omegaNorm = Math.max(-5.0, Math.min(5.0, thetaDot));
+            const omegaIdx = Math.floor((omegaNorm + 5.0) / 10.0 * (omegaBins - 1));
+            
+            return `${xIdx},${thetaIdx},${vIdx},${omegaIdx}`;
+        }
+        
+        function getOrCreateQValues(stateKey) {
+            if (!Q[stateKey]) {
+                Q[stateKey] = [
+                    Math.random() * 0.1 - 0.05,  // 左
+                    Math.random() * 0.1 - 0.05,  // 不动
+                    Math.random() * 0.1 - 0.05   // 右
+                ];
+            }
+            return Q[stateKey];
+        }
+        
+        // ==================== AI决策 ====================
+        function chooseAction(stateKey) {
+            const qValues = getOrCreateQValues(stateKey);
+            
+            // ε-greedy策略
+            if (Math.random() < learningEpsilon) {
+                return Math.floor(Math.random() * 3);  // 随机动作
+            }
+            
+            // 选择最大Q值的动作
+            let bestAction = 1;  // 默认不动
+            let maxQ = qValues[1];
+            
+            for (let i = 0; i < 3; i++) {
+                if (qValues[i] > maxQ) {
+                    maxQ = qValues[i];
+                    bestAction = i;
+                }
+            }
+            
+            return bestAction;
+        }
+        
+        // ==================== 物理模拟 ====================
+        function updatePhysics(force) {
+            const sinTheta = Math.sin(theta);
+            const cosTheta = Math.cos(theta);
+            
+            // 计算角加速度
+            const denominator = (M + m) * (4.0/3.0) - m * cosTheta * cosTheta;
+            const thetaDotDot = (g * sinTheta - cosTheta * (force + m * l * thetaDot * thetaDot * sinTheta) / (M + m)) 
+                               / (l * (4.0/3.0 - (m * cosTheta * cosTheta) / (M + m)));
+            
+            // 计算小车加速度
+            const cartAcc = (force + m * l * (thetaDot * thetaDot * sinTheta - thetaDotDot * cosTheta)) / (M + m);
+            
+            // 欧拉积分
+            cartV += cartAcc * dt;
+            cartX += cartV * dt;
+            thetaDot += thetaDotDot * dt;
+            theta += thetaDot * dt;
+            
+            // 角度归一化
+            theta = ((theta + Math.PI) % (2 * Math.PI)) - Math.PI;
+            
+            // 阻尼
+            cartV *= 0.995;
+            thetaDot *= 0.995;
+            
+            // 边界限制
+            if (Math.abs(cartX) > trackHalfLength) {
+                cartX = Math.sign(cartX) * trackHalfLength;
+                cartV = 0;
+            }
+            
+            updatePhysicsDisplay();
+        }
+        
+        // ==================== 奖励函数 ====================
+        function calculateReward() {
+            if (isGameOver()) {
+                return -100.0;  // 游戏结束惩罚
+            }
+            
+            let reward = 1.0;  // 存活奖励
+            
+            // 角度奖励（越小越好）
+            const angleReward = 3.0 * Math.exp(-Math.abs(theta) * 4);
+            reward += angleReward;
+            
+            // 位置奖励（越居中越好）
+            const posReward = 2.0 * Math.exp(-Math.abs(cartX));
+            reward += posReward;
+            
+            // 速度惩罚（防止震荡）
+            if (Math.abs(cartV) > 2.0) {
+                reward -= Math.abs(cartV) * 0.5;
+            }
+            
+            return reward;
+        }
+        
+        function isGameOver() {
+            return Math.abs(theta) > maxAngle || Math.abs(cartX) > trackHalfLength;
+        }
+        
+        // ==================== 学习算法 ====================
+        function updateQValues() {
+            if (trajectory.length === 0) return;
+            
+            // 从最后一步开始反向传播
+            for (let i = trajectory.length - 1; i >= 0; i--) {
+                const { state, action, reward, nextState, done } = trajectory[i];
+                
+                const qValues = getOrCreateQValues(state);
+                const nextQValues = getOrCreateQValues(nextState);
+                
+                // 计算目标Q值
+                let targetQ = reward;
+                if (!done) {
+                    const maxNextQ = Math.max(...nextQValues);
+                    targetQ += learningGamma * maxNextQ;
+                }
+                
+                // Q-learning更新
+                qValues[action] += learningAlpha * (targetQ - qValues[action]);
+            }
+            
+            trajectory = [];
+        }
+        
+        // ==================== 游戏循环 ====================
+        function gameStep() {
+            if (!isRunning || isPaused) return;
+            
+            stepCount++;
+            totalSteps++;
+            
+            // 获取当前状态
+            const stateKey = discretizeState();
+            
+            // 选择动作
+            let action = 1;  // 默认不动
+            if (isTrainingMode) {
+                action = chooseAction(stateKey);
+            }
+            
+            // 执行动作
+            appliedForce = actionToForce(action);
+            
+            // 更新物理状态
+            updatePhysics(appliedForce);
+            
+            // 计算奖励
+            const reward = calculateReward();
+            currentScore += reward;
+            totalReward += reward;
+            
+            // 检查游戏结束
+            const done = isGameOver();
+            
+            // 获取下一状态
+            const nextStateKey = discretizeState();
+            
+            // 保存经验
+            if (isTrainingMode) {
+                trajectory.push({
+                    state: stateKey,
+                    action: action,
+                    reward: reward,
+                    nextState: nextStateKey,
+                    done: done
+                });
+                
+                // 每50步学习一次
+                if (trajectory.length >= 50) {
+                    updateQValues();
+                }
+            }
+            
+            // 游戏结束处理
+            if (done) {
+                if (isTrainingMode) {
+                    // 完成一轮训练
+                    //episodeCount++;
+                    
+                    // 从完整轨迹学习
+                    updateQValues();
+                    
+                    // 衰减探索率
+                    learningEpsilon = Math.max(minEpsilon, learningEpsilon * epsilonDecay);
+                    
+                    // 记录历史
+                    trainingHistory.push({
+                        episode: episodeCount,
+                        score: currentScore,
+                        epsilon: learningEpsilon
+                    });
+                    
+                    // 更新最佳得分
+                    if (currentScore > bestScore) {
+                        bestScore = Math.round(currentScore);
+                        bestEpisode = episodeCount;
+                        addLog(`🎉 新记录! 第${episodeCount}轮得分: ${bestScore}`, "success");
+                    }
+                    
+                    // 记录训练日志
+                    if (episodeCount % 10 === 0) {
+                        addLog(`第${episodeCount}轮完成, 得分: ${Math.round(currentScore)}, ε: ${learningEpsilon.toFixed(3)}`, "info");
+                    }
+                }
+                
+                endGame();
+                return;
+            }
+            
+            // 更新UI
+            updateUI();
+            
+            // 绘制
+            draw();
+        }
+        
+        function actionToForce(action) {
+            switch(action) {
+                case 0: return -forceMagnitude;  // 左
+                case 1: return 0.0;              // 不动
+                case 2: return forceMagnitude;   // 右
+                default: return 0.0;
+            }
+        }
+        
+        // ==================== 绘图函数 ====================
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // 绘制轨道
+            const trackY = canvas.height * 0.7;
+            const trackLeft = canvas.width * 0.1;
+            const trackRight = canvas.width * 0.9;
+            const trackWidth = trackRight - trackLeft;
+            
+            // 轨道背景
+            ctx.fillStyle = '#34495e';
+            ctx.fillRect(trackLeft, trackY - 5, trackWidth, 10);
+            
+            // 轨道标线
+            ctx.strokeStyle = '#7f8c8d';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(trackLeft, trackY);
+            ctx.lineTo(trackRight, trackY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            // 轨道边界
+            ctx.strokeStyle = '#e74c3c';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(trackLeft, trackY - 15);
+            ctx.lineTo(trackLeft, trackY + 15);
+            ctx.moveTo(trackRight, trackY - 15);
+            ctx.lineTo(trackRight, trackY + 15);
+            ctx.stroke();
+            
+            // 计算坐标转换
+            const scale = trackWidth / (2 * trackHalfLength);
+            const cartPixelX = (cartX + trackHalfLength) * scale + trackLeft;
+            const cartPixelY = trackY;
+            
+            // 绘制小车
+            const cartWidth = 50;
+            const cartHeight = 30;
+            
+            // 小车主体
+            ctx.fillStyle = isTrainingMode ? '#9b59b6' : '#3498db';
+            ctx.fillRect(cartPixelX - cartWidth/2, cartPixelY - cartHeight, cartWidth, cartHeight);
+            
+            // 小车装饰
+            ctx.fillStyle = '#2c3e50';
+            ctx.fillRect(cartPixelX - cartWidth/2 + 5, cartPixelY - 5, 10, 5);
+            ctx.fillRect(cartPixelX + cartWidth/2 - 15, cartPixelY - 5, 10, 5);
+            
+            // 绘制摆杆
+            const poleLength = 0.5 * 150;  // 像素长度
+            const poleEndX = cartPixelX + poleLength * Math.sin(theta);
+            const poleEndY = cartPixelY - cartHeight - poleLength * Math.cos(theta);
+            
+            ctx.strokeStyle = '#e74c3c';
+            ctx.lineWidth = 6;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(cartPixelX, cartPixelY - cartHeight);
+            ctx.lineTo(poleEndX, poleEndY);
+            ctx.stroke();
+            
+            // 绘制摆锤
+            ctx.fillStyle = '#c0392b';
+            ctx.beginPath();
+            ctx.arc(poleEndX, poleEndY, 12, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // 绘制角度指示器
+            ctx.strokeStyle = '#2ecc71';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(cartPixelX, cartPixelY - cartHeight, 20, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(cartPixelX, cartPixelY - cartHeight);
+            ctx.lineTo(
+                cartPixelX + 20 * Math.sin(theta),
+                cartPixelY - cartHeight - 20 * Math.cos(theta)
+            );
+            ctx.stroke();
+            
+            // 绘制力指示器
+            if (Math.abs(appliedForce) > 0.1) {
+                const forceDir = Math.sign(appliedForce);
+                const forceX = cartPixelX + (cartWidth/2 + 10) * forceDir;
+                
+                ctx.strokeStyle = '#f39c12';
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.moveTo(forceX, cartPixelY - cartHeight/2);
+                ctx.lineTo(forceX + 20 * forceDir, cartPixelY - cartHeight/2);
+                ctx.stroke();
+                
+                // 力箭头
+                ctx.beginPath();
+                ctx.moveTo(forceX + 20 * forceDir, cartPixelY - cartHeight/2);
+                ctx.lineTo(forceX + 15 * forceDir, cartPixelY - cartHeight/2 - 5);
+                ctx.lineTo(forceX + 15 * forceDir, cartPixelY - cartHeight/2 + 5);
+                ctx.closePath();
+                ctx.fillStyle = '#f39c12';
+                ctx.fill();
+            }
+            
+            // 绘制状态信息
+            ctx.fillStyle = '#ecf0f1';
+            ctx.fillRect(10, 10, 180, 100);
+            
+            ctx.fillStyle = '#2c3e50';
+            ctx.font = '14px Arial';
+            ctx.textAlign = 'left';
+            ctx.fillText(`模式: ${isTrainingMode ? '🤖 AI训练' : '👆 手动控制'}`, 20, 30);
+            ctx.fillText(`轮数: ${episodeCount}`, 20, 50);
+            ctx.fillText(`得分: ${Math.round(currentScore)}`, 20, 70);
+            ctx.fillText(`步数: ${stepCount}`, 20, 90);
+            
+            if (isTrainingMode) {
+                ctx.fillText(`探索率: ${learningEpsilon.toFixed(3)}`, 20, 110);
+            }
+        }
+        
+        // ==================== UI更新 ====================
+        function updateUI() {
+            document.getElementById('episodeCount').textContent = episodeCount;
+            document.getElementById('currentScore').textContent = Math.round(currentScore);
+            document.getElementById('bestScore').textContent = bestScore;
+            document.getElementById('stepCount').textContent = stepCount;
+            
+            // 更新滑块显示
+            document.getElementById('alphaValue').textContent = learningAlpha.toFixed(2);
+            document.getElementById('gammaValue').textContent = learningGamma.toFixed(3);
+            document.getElementById('epsilonValue').textContent = learningEpsilon.toFixed(2);
+            document.getElementById('decayValue').textContent = epsilonDecay.toFixed(3);
+        }
+        
+        function updatePhysicsDisplay() {
+            document.getElementById('cartPosition').textContent = cartX.toFixed(2) + ' m';
+            document.getElementById('cartVelocity').textContent = cartV.toFixed(2) + ' m/s';
+            document.getElementById('poleAngle').textContent = (theta * 180 / Math.PI).toFixed(2) + '°';
+            document.getElementById('angularVelocity').textContent = thetaDot.toFixed(2) + ' rad/s';
+        }
+        
+        function addLog(message, type = "info") {
+            const logElement = document.getElementById('trainingLog');
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry log-${type}`;
+            
+            const timestamp = new Date().toLocaleTimeString('zh-CN', { 
+                hour12: false,
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            logElement.appendChild(logEntry);
+            
+            // 保持日志在5条以内
+            while (logElement.children.length > 5) {
+                logElement.removeChild(logElement.firstChild);
+            }
+            
+            // 滚动到底部
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+        
+        // ==================== 游戏控制 ====================
+        function startGame() {
+            if (!isRunning) {
+                isRunning = true;
+                isPaused = false;
+                
+                if (isTrainingMode) {
+                    episodeCount++;
+                    resetGameState();
+                    addLog(`开始第${episodeCount}轮训练`, "info");
+                } else {
+                    resetGameState();
+                    addLog("开始手动控制", "info");
+                }
+                
+                document.getElementById('gameStatus').classList.remove('show');
+                document.getElementById('startBtn').innerHTML = '<span>⏸</span> 暂停训练';
+            } else {
+                pauseGame();
+            }
+            
+            if (gameLoop) clearInterval(gameLoop);
+            gameLoop = setInterval(gameStep, dt * 1000);
+        }
+        
+        function pauseGame() {
+            isPaused = !isPaused;
+            document.getElementById('pauseBtn').innerHTML = isPaused ? 
+                '<span>▶</span> 继续' : '<span>⏸</span> 暂停';
+            
+            if (isPaused) {
+                addLog("游戏暂停", "warning");
+            } else {
+                addLog("游戏继续", "info");
+            }
+        }
+        
+        function endGame() {
+            isRunning = false;
+            clearInterval(gameLoop);
+            
+            document.getElementById('gameStatus').classList.add('show');
+            document.getElementById('startBtn').innerHTML = '<span>▶</span> 开始训练';
+            
+            if (isTrainingMode) {
+                addLog(`第${episodeCount}轮结束，得分: ${Math.round(currentScore)}`, 
+                      currentScore > bestScore * 0.8 ? "success" : "info");
+            }
+        }
+        
+        function resetGame() {
+            clearInterval(gameLoop);
+            isRunning = false;
+            isPaused = false;
+            
+            resetGameState();
+            
+            document.getElementById('gameStatus').classList.remove('show');
+            document.getElementById('startBtn').innerHTML = '<span>▶</span> 开始训练';
+            document.getElementById('pauseBtn').innerHTML = '<span>⏸</span> 暂停';
+            
+            updateUI();
+            draw();
+            
+            addLog("游戏已重置", "info");
+        }
+        
+        function switchToTrainingMode() {
+            isTrainingMode = true;
+            document.getElementById('trainBtn').innerHTML = '<span>🤖</span> AI模式';
+            document.getElementById('manualBtn').innerHTML = '<span>👆</span> 切换到手动';
+            addLog("切换到AI训练模式", "info");
+        }
+        
+        function switchToManualMode() {
+            isTrainingMode = false;
+            learningEpsilon = 0;  // 手动模式下不探索
+            document.getElementById('trainBtn').innerHTML = '<span>🤖</span> 切换到AI';
+            document.getElementById('manualBtn').innerHTML = '<span>👆</span> 手动模式';
+            addLog("切换到手动控制模式", "info");
+        }
+        
+        // ==================== 事件监听 ====================
+        document.getElementById('startBtn').addEventListener('click', startGame);
+        document.getElementById('pauseBtn').addEventListener('click', pauseGame);
+        document.getElementById('resetBtn').addEventListener('click', resetGame);
+        document.getElementById('trainBtn').addEventListener('click', switchToTrainingMode);
+        document.getElementById('manualBtn').addEventListener('click', switchToManualMode);
+        
+        // 参数滑块事件
+        document.getElementById('alphaSlider').addEventListener('input', (e) => {
+            learningAlpha = parseFloat(e.target.value);
+            updateUI();
+        });
+        
+        document.getElementById('gammaSlider').addEventListener('input', (e) => {
+            learningGamma = parseFloat(e.target.value);
+            updateUI();
+        });
+        
+        document.getElementById('epsilonSlider').addEventListener('input', (e) => {
+            learningEpsilon = parseFloat(e.target.value);
+            updateUI();
+        });
+        
+        document.getElementById('decaySlider').addEventListener('input', (e) => {
+            epsilonDecay = parseFloat(e.target.value);
+            updateUI();
+        });
+        
+        // 键盘控制
+        document.addEventListener('keydown', (e) => {
+            if (!isRunning || isPaused || isTrainingMode) return;
+            
+            switch(e.key) {
+                case 'ArrowLeft':
+                    appliedForce = -forceMagnitude;
+                    break;
+                case 'ArrowRight':
+                    appliedForce = forceMagnitude;
+                    break;
+                case ' ':
+                    appliedForce = 0;
+                    break;
+            }
+            updatePhysics(appliedForce);
+        });
+        
+        document.addEventListener('keyup', (e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+                appliedForce = 0;
+            }
+        });
+        
+        // 初始化
+        window.addEventListener('load', initGame);
+    </script>
+</body>
+</html>
